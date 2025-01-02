@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
 project(MyGraphDB)
 
+# Set the C++ standard to C++17
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Add your source files here
 set(SOURCES
     driver.cpp
     Node.cpp
     PProcedure.cpp
     Value.cpp
+    Graph.cpp
 )
 
 # Add any additional include directories here
@@ -21,7 +26,7 @@ set(SOURCES
 # )
 
 # Add any additional compiler flags here
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O0 -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O0 -g")
 
 # Create the executable
 add_executable(driver ${SOURCES})

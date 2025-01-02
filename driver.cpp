@@ -3,6 +3,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stack>
+#include "Graph.h"
 #include "PProcedure.h"
 using namespace std;
 
@@ -124,6 +125,8 @@ int main(int argc, char *argv[]) {
     }
 
     // [FILL HERE] Load the dataset according to the scale factor
+    Graph graph(sf);
+    return 0;
 
     // Repeatedly read test cases from stdin
     string line;
