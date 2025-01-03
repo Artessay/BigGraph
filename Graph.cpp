@@ -8,10 +8,13 @@
 
 namespace fs = std::filesystem;
 
+extern std::vector<std::string> split(const std::string& str, char delimiter);
+
 Graph::Graph(const std::string& sf) {
     std::string baseDir = "social_network-csv_composite-longdateformatter-sf" + sf;
 
     loadGraph(baseDir, "dynamic");
+    loadGraph(baseDir, "static");
 }
 
 void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType) {
@@ -36,8 +39,13 @@ void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType)
                 loadNodes(schemaName, dataDir);
             } else {
                 // edge
-                edgeSchemas[schemaName] = schema;
-                // loadEdges(schemaName, dataDir);
+                std::vector<std::string> schemaParts = split(schemaName, '_');
+                assert(schemaParts.size() == 3);
+
+                std::string edgeType = schemaParts[1];
+
+                edgeSchemas[edgeType] = schema;
+                loadEdges(edgeType, dataDir);
             }
         }
     }
@@ -96,9 +104,106 @@ void Graph::loadNodes(const std::string& schemaName, const std::string& dataDir)
                 break;
             }
             const auto& [attrName, attrType] = nodeSchemas[schemaName].attributes[attrIndex];
+
             if (attrName == "id") {
                 node.id = std::stoll(field);
             } else {
+                GPStore::Value value;
+                if (attrType.find("ID") != std::string::npos) {
+                    // assume all IDs are 64-bit
+                    value = GPStore::Value(std::stoll(field));
+                }
+                else if (attrType == "LONG") {
+                    value = GPStore::Value(std::stoll(field));
+                }
+                else if (attrType == "DOUBLE") {
+                    value = GPStore::Value(std::stod(field));
+                }
+                else if (attrType == "STRING" || attrType == "STRING[]" || attrType == "LABEL") {
+                    value = GPStore::Value(field);
+                }
+                else { // 其他类型
+                    std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
+                    assert(false && "Unsupported attribute type ");
+                    value = GPStore::Value(field);
+                }
+                node.attributes[attrName] = value;
+            }
+            attrIndex++;
+        }
+
+        nodes[schemaName].emplace_back(std::move(node));
+    }
+
+#ifdef DEBUG
+    std::cout << "Loaded " << nodes[schemaName].size() << " nodes of type " << schemaName << std::endl;
+#endif
+}
+
+std::string extractContent(const std::string& str) {
+    std::size_t start = str.find('(');
+    std::size_t end = str.find(')');
+    if (start != std::string::npos && end != std::string::npos && start < end) {
+        return str.substr(start + 1, end - start - 1);
+    }
+    return "";  // 如果没有找到或格式不正确，则返回空字符串
+}
+
+void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
+    const auto& edgeSchema = edgeSchemas[edgeType];
+    assert(edgeSchema.attributes.size() >= 2);
+
+    std::string startAttrName = edgeSchema.attributes[0].second;
+    std::string endAttrName = edgeSchema.attributes[1].second;
+    assert(startAttrName.find("START_ID") != std::string::npos);
+    assert(endAttrName.find("END_ID") != std::string::npos);
+
+    std::string startNodeSchema = extractContent(startAttrName);
+    std::string endNodeSchema = extractContent(endAttrName);
+    assert(!startNodeSchema.empty());
+    assert(!endNodeSchema.empty());
+
+    // 转换为首字母小写以匹配文件名，例如 Comment_hasCreator_Person -> comment_hasCreator_person
+    std::string prefixLower = startNodeSchema + "_" + edgeType + "_" + endNodeSchema;
+    for (size_t i = 0; i < prefixLower.length(); ++i) {
+        if (i == 0 || prefixLower[i - 1] == '_') {
+            // 如果是每部分的第一个字符，则转换为小写
+            prefixLower[i] = std::tolower(prefixLower[i]);
+        }
+    }
+
+    std::string filename = dataDir + "/" + prefixLower + "_0_0.csv";
+
+    std::ifstream infile(filename);
+    if (!infile.is_open()) {
+        std::cerr << "Can not open file: " << filename << std::endl;
+        return;
+    }
+    // std::cerr << "Opened file: " << filename << std::endl;
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::stringstream ss(line);
+        std::string field;
+        GraphEdge edge;
+        size_t attrIndex = 0;
+
+        while (std::getline(ss, field, '|')) {
+            if (attrIndex >= edgeSchema.attributes.size()) {
+                assert(false && "Attribute index out of range");
+                break;
+            }
+            const auto& [attrName, attrType] = edgeSchema.attributes[attrIndex];
+            
+            if (attrName == ":START_ID") {
+                assert(false);
+                edge.start_id = std::stoll(field);
+            }
+            else if (attrName == ":END_ID") {
+                assert(false);
+                edge.end_id = std::stoll(field);
+            }
+            else {
                 GPStore::Value value;
                 if (attrType.find("ID") != std::string::npos) {
                     // assume all IDs are 64-bit
@@ -114,85 +219,22 @@ void Graph::loadNodes(const std::string& schemaName, const std::string& dataDir)
                     value = GPStore::Value(field);
                 }
                 else { // 其他类型
-                    std::cerr << "Unsupported attribute type: " << attrType << std::endl;
-                    // assert(false && "Unsupported attribute type ");
+                    std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
+                    assert(false && "Unsupported attribute type ");
                     value = GPStore::Value(field);
                 }
-                node.attributes[attrName] = value;
+                edge.attributes[attrName] = value;
             }
             attrIndex++;
         }
 
-        nodes[schemaName].emplace_back(std::move(node));
+        edges[edgeType].emplace_back(std::move(edge));
     }
 
-    std::cout << "Loaded " << nodes[schemaName].size() << " nodes of type " << schemaName << std::endl;
+#ifdef DEBUG
+    std::cout << "Loaded " << edges[edgeType].size() << " edges of type " << edgeType << std::endl;
+#endif
 }
-
-// void Graph::loadEdges(const std::string& schemaName, const std::string& dataDir) {
-//     // 构建数据文件前缀
-//     std::string prefix = schemaName;
-//     // 转换为小写以匹配文件名，例如 Comment_hasCreator_Person -> comment_hascreator_person
-//     std::string prefixLower = prefix;
-//     std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), ::tolower);
-
-//     // 遍历dynamic目录下匹配的文件
-//     for (const auto& entry : fs::directory_iterator(dataDir)) {
-//         if (entry.is_regular_file()) {
-//             std::string filename = entry.path().filename().string();
-//             // 检查文件名是否以prefixLower_开头且以.csv结尾
-//             if (filename.find(prefixLower + "_") == 0 && filename.substr(filename.find_last_of('.')) == ".csv") {
-//                 std::ifstream infile(entry.path());
-//                 if (!infile.is_open()) {
-//                     std::cerr << "无法打开数据文件: " << entry.path() << std::endl;
-//                     continue;
-//                 }
-
-//                 std::string line;
-//                 // 读取每一行
-//                 while (std::getline(infile, line)) {
-//                     std::stringstream ss(line);
-//                     std::string field;
-//                     GraphEdge edge;
-//                     size_t attrIndex = 0;
-
-//                     while (std::getline(ss, field, '|')) {
-//                         if (attrIndex >= edgeSchemas[schemaName].attributes.size()) break;
-//                         const auto& [attrName, attrType] = edgeSchemas[schemaName].attributes[attrIndex];
-//                         if (attrName == ":START_ID") {
-//                             edge.start_id = std::stoll(field);
-//                         }
-//                         else if (attrName == ":END_ID") {
-//                             edge.end_id = std::stoll(field);
-//                         }
-//                         else {
-//                             GPStore::Value value;
-//                             if (attrType.find("ID(") != std::string::npos) {
-//                                 // 处理ID类型，假设都是64-bit
-//                                 value = GPStore::Value(static_cast<GPStore::Value::Type>(GPStore::Value::NODE), std::stoll(field));
-//                             }
-//                             else if (attrType == "LONG") {
-//                                 value = GPStore::Value(static_cast<GPStore::Value::Type>(GPStore::Value::LONG), std::stoll(field));
-//                             }
-//                             else if (attrType == "DOUBLE") {
-//                                 value = GPStore::Value(std::stod(field));
-//                             }
-//                             else { // STRING 或其他类型
-//                                 value = GPStore::Value(field);
-//                             }
-//                             edge.attributes[attrName] = value;
-//                         }
-//                         attrIndex++;
-//                     }
-
-//                     edges[schemaName].emplace_back(std::move(edge));
-//                 }
-//             }
-//         }
-//     }
-
-//     std::cout << "Loaded " << edges[schemaName].size() << " edges of type " << schemaName << std::endl;
-// }
 
 void Graph::printInfo() const {
     std::cout << "Graph Information:" << std::endl;
@@ -204,4 +246,20 @@ void Graph::printInfo() const {
     for (const auto& [type, edgeList] : edges) {
         std::cout << "  " << type << ": " << edgeList.size() << " edges" << std::endl;
     }
+}
+
+
+Graph::GraphNode* Graph::findNode(const std::string& nodeType, int64_t nodeId) {
+    auto it = nodes.find(nodeType);
+    if (it == nodes.end()) {
+        return nullptr;
+    }
+
+    for (auto& node : it->second) {
+        if (node.id == nodeId) {
+            return &node;
+        }
+    }
+
+    return nullptr;
 }

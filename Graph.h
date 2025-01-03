@@ -11,6 +11,20 @@ class Graph {
 
         void loadGraph(const std::string& baseDir, const std::string& schemaType);
 
+        struct GraphNode {
+            int64_t id;
+            std::unordered_map<std::string, GPStore::Value> attributes;
+            std::unordered_map<std::string, std::vector<int64_t>> neighbors;
+        };
+
+        struct GraphEdge {
+            int64_t start_id;
+            int64_t end_id;
+            std::unordered_map<std::string, GPStore::Value> attributes;
+        };
+
+        GraphNode* findNode(const std::string& nodeType, int64_t nodeId);
+
         void printInfo() const;
 
     private:
@@ -21,17 +35,6 @@ class Graph {
         std::unordered_map<std::string, Schema> nodeSchemas;
 
         std::unordered_map<std::string, Schema> edgeSchemas;
-
-        struct GraphNode {
-            int64_t id;
-            std::unordered_map<std::string, GPStore::Value> attributes;
-        };
-
-        struct GraphEdge {
-            int64_t start_id;
-            int64_t end_id;
-            std::unordered_map<std::string, GPStore::Value> attributes;
-        };
 
         // 存储节点，按类型分类
         std::unordered_map<std::string, std::vector<GraphNode>> nodes;
@@ -44,5 +47,5 @@ class Graph {
 
         void loadNodes(const std::string& schemaName, const std::string& dataDir);
         
-        // void loadEdges(const std::string& schemaName, const std::string& dataDir);
+        void loadEdges(const std::string& schemaName, const std::string& dataDir);
 };
