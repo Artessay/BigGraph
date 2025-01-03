@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 
     // [FILL HERE] Load the dataset according to the scale factor
     Graph graph(sf);
-    return 0;
+    graph.printInfo();
 
     // Repeatedly read test cases from stdin
     string line;
