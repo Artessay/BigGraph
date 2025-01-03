@@ -7,9 +7,17 @@
 
 class Graph {
     public:
-        Graph(const std::string& sf);
 
-        void loadGraph(const std::string& baseDir, const std::string& schemaType);
+        static Graph& getInstance() {
+            static std::mutex mtx;
+            std::lock_guard<std::mutex> lock(mtx);
+            static Graph instance;
+            return instance;
+        }
+
+        // ban copy and assignment
+        Graph(const Graph&) = delete;
+        Graph& operator=(const Graph&) = delete;
 
         struct GraphNode {
             int64_t id;
@@ -22,6 +30,10 @@ class Graph {
             int64_t end_id;
             std::unordered_map<std::string, GPStore::Value> attributes;
         };
+
+        void init(const std::string& sf);
+
+        GraphNode* findNode(int64_t nodeId);
 
         GraphNode* findNode(const std::string& nodeType, int64_t nodeId);
 
@@ -42,6 +54,9 @@ class Graph {
         // 存储边，按类型分类
         std::unordered_map<std::string, std::vector<GraphEdge>> edges;
 
+        Graph() {};
+
+        void loadGraph(const std::string& baseDir, const std::string& schemaType);
 
         void parseSchema(const std::string& schemaFile, Schema& schema);
 

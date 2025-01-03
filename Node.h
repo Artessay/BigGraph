@@ -1,11 +1,14 @@
 #include <string>
 #include <memory>
 #include "Value.h"
+#include "Graph.h"
 
 class Node {
  public:
   unsigned node_id_;
 
+  Graph::GraphNode* node_;
+  
   Node()=default;
   Node(const std::string& label_string, const std::string& prop_string, const GPStore::Value* value);
   Node(unsigned node_id);

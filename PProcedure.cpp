@@ -172,8 +172,8 @@ void is1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     result.back().emplace_back(*person_node["birthday"]);
     result.back().emplace_back(*person_node["locationIP"]);
     result.back().emplace_back(*person_node["browserUsed"]);
-    Node city_node(person_node["PERSON_PLACE"]->toLLong());
-    result.back().emplace_back(*city_node["id"]);
-    result.back().emplace_back(*person_node["gender"]);
-    result.back().emplace_back(*person_node["creationDate"]);
+    // Node city_node(person_node["PERSON_PLACE"]->toLLong());
+    // result.back().emplace_back(*city_node["id"]);
+    // result.back().emplace_back(*person_node["gender"]);
+    // result.back().emplace_back(*person_node["creationDate"]);
 }

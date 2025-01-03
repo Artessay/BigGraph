@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 extern std::vector<std::string> split(const std::string& str, char delimiter);
 
-Graph::Graph(const std::string& sf) {
+void Graph::init(const std::string& sf) {
     std::string baseDir = "social_network-csv_composite-longdateformatter-sf" + sf;
 
     loadGraph(baseDir, "dynamic");
@@ -224,6 +224,8 @@ void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
                     value = GPStore::Value(field);
                 }
                 edge.attributes[attrName] = value;
+
+                //
             }
             attrIndex++;
         }
@@ -248,6 +250,18 @@ void Graph::printInfo() const {
     }
 }
 
+
+Graph::GraphNode* Graph::findNode(int64_t nodeId) {
+    for (auto& [type, nodeList] : nodes) {
+        for (auto& node : nodeList) {
+            if (node.id == nodeId) {
+                return &node;
+            }
+        }
+    }
+
+    return nullptr;
+}
 
 Graph::GraphNode* Graph::findNode(const std::string& nodeType, int64_t nodeId) {
     auto it = nodes.find(nodeType);

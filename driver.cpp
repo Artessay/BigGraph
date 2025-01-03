@@ -125,8 +125,21 @@ int main(int argc, char *argv[]) {
     }
 
     // [FILL HERE] Load the dataset according to the scale factor
-    Graph graph(sf);
-    graph.printInfo();
+    Graph& graph = Graph::getInstance();
+    graph.init(sf);
+
+#ifdef DEBUG
+    // graph.printInfo();
+    cout << "Graph loaded" << endl;
+
+    vector<GPStore::Value> args;
+    vector<vector<GPStore::Value>> result;
+    args.emplace_back(32985348833679LL);
+    is1(args, result);
+    printResults(result);
+
+    return 0;
+#endif
 
     // Repeatedly read test cases from stdin
     string line;
