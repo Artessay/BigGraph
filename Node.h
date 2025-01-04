@@ -21,5 +21,7 @@ class Node {
   void GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const int64_t[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
                                    unsigned& prop_len, unsigned& list_len, char edge_dir);
 
+  std::vector<GPStore::Value>& GetLinkedNodes(const std::string& pre_str, char edge_dir);
+
   void printInfo() const;
 };

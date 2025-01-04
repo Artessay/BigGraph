@@ -70,15 +70,14 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         return;
     assert(person_node.node_ != nullptr);
     
-    std::set<std::tuple<int, std::string, long long, unsigned> > candidates;
+    std::set<std::tuple<int, std::string, long long, uint64_t> > candidates;
     TYPE_ENTITY_LITERAL_ID start_vid = person_node.node_id_;
     std::vector<TYPE_ENTITY_LITERAL_ID> curr_frontier({start_vid});
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
 
-    std::cerr << "start vid: " << start_vid << std::endl;
+    // std::cerr << "start vid: " << start_vid << std::endl;
 
-    // for (int distance = 0; distance <= 3; distance++) {
-    for (int distance = 0; distance <= 0; distance++) {
+    for (int distance = 0; distance <= 3; distance++) {
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
         for (const auto& vid : curr_frontier) {
             Node froniter_person("Person", vid);
@@ -104,35 +103,32 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
             Node froniter_person("Person", vid);
             // froniter_person.printInfo();
 
-
-
-            std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> friends_list = nullptr; unsigned list_len;
-            froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_OUT);
-            for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
-                TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
+            std::vector<GPStore::Value>& friends_out = froniter_person.GetLinkedNodes("knows", EDGE_OUT);
+            for (const auto& friend_node : friends_out) {
+                TYPE_ENTITY_LITERAL_ID friend_vid = friend_node.toLLong();
                 if (visited.find(friend_vid) == visited.end()) {
                     visited.emplace(friend_vid);
                     next_frontier.emplace_back(friend_vid);
                 }
             }
-            friends_list = nullptr;
-            froniter_person.GetLinkedNodes("KNOWS", friends_list, list_len, EDGE_IN);
-            for (unsigned friend_index = 0; friend_index < list_len; ++friend_index) {
-                TYPE_ENTITY_LITERAL_ID friend_vid = friends_list[friend_index];
+
+            std::vector<GPStore::Value>& friends_in = froniter_person.GetLinkedNodes("knows", EDGE_IN);
+            for (const auto& friend_node : friends_in) {
+                TYPE_ENTITY_LITERAL_ID friend_vid = friend_node.toLLong();
                 if (visited.find(friend_vid) == visited.end()) {
                     visited.emplace(friend_vid);
                     next_frontier.emplace_back(friend_vid);
                 }
             }
-            friends_list = nullptr;
         }
         std::sort(next_frontier.begin(), next_frontier.end());
         curr_frontier.swap(next_frontier);
     }
 
     for (const auto & tup : candidates) {
-        unsigned vid = std::get<3>(tup);
-        Node person(vid);
+        int64_t vid = std::get<3>(tup);
+        Node person("Person", vid);
+        // person.printInfo();
 
         result.emplace_back();
         result.back().reserve(13);
@@ -146,7 +142,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(*person["locationIP"]);
         result.back().emplace_back(*person["email"]);
         result.back().emplace_back(*person["language"]);
-        result.back().emplace_back(*Node(person["PERSON_PLACE"]->toLLong())["name"]);   // TODO: PERSON_PLACE not in original data
+        result.back().emplace_back(*Node("Place", person["isLocatedIn"]->toLLong())["name"]);
 
         std::shared_ptr<const int64_t[]> list = nullptr; unsigned list_len = 0;
         std::shared_ptr<const long long[]> prop_list = nullptr; unsigned prop_len = 0;

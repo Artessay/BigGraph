@@ -57,7 +57,8 @@ class Graph {
 
         Graph() {};
 
-        void loadGraph(const std::string& baseDir, const std::string& schemaType);
+        void loadGraphNode(const std::string& baseDir, const std::string& schemaType);
+        void loadGraphEdge(const std::string& baseDir, const std::string& schemaType);
 
         void parseSchema(const std::string& schemaFile, Schema& schema);
 

@@ -13,11 +13,14 @@ extern std::vector<std::string> split(const std::string& str, char delimiter);
 void Graph::init(const std::string& sf) {
     std::string baseDir = "social_network-csv_composite-longdateformatter-sf" + sf;
 
-    loadGraph(baseDir, "dynamic");
-    loadGraph(baseDir, "static");
+    loadGraphNode(baseDir, "dynamic");
+    loadGraphNode(baseDir, "static");
+
+    loadGraphEdge(baseDir, "dynamic");
+    loadGraphEdge(baseDir, "static");
 }
 
-void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType) {
+void Graph::loadGraphNode(const std::string& baseDir, const std::string& schemaType) {
     std::string headersDir = baseDir + "/headers/" + schemaType;
     std::string dataDir = baseDir + "/" + schemaType;
 
@@ -44,6 +47,11 @@ void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType)
             }
         }
     }
+}
+
+void Graph::loadGraphEdge(const std::string& baseDir, const std::string& schemaType) {
+    std::string headersDir = baseDir + "/headers/" + schemaType;
+    std::string dataDir = baseDir + "/" + schemaType;
 
     for (const auto& entry : fs::directory_iterator(headersDir)) {
         if (entry.is_regular_file()) {
@@ -142,8 +150,22 @@ void Graph::loadNodes(const std::string& schemaName, const std::string& dataDir)
             else if (attrType == "DOUBLE") {
                 value = GPStore::Value(std::stod(field));
             }
-            else if (attrType == "STRING" || attrType == "STRING[]" || attrType == "LABEL") {
+            else if (attrType == "STRING" || attrType == "LABEL") {
                 value = GPStore::Value(field);
+            }
+            else if (attrType == "STRING[]") {
+                std::vector<std::string> tokens = split(field, ';');
+                std::vector<GPStore::Value *> values;
+                for (const auto& token : tokens) {
+                    values.push_back(new GPStore::Value(token));
+                }
+                
+                value = GPStore::Value(values, true /* deep_copy */);
+
+                // free memory
+                for (auto v : values) {
+                    delete v;
+                }
             }
             else { // 其他类型
                 std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
@@ -236,8 +258,22 @@ void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
                 else if (attrType == "DOUBLE") {
                     value = GPStore::Value(std::stod(field));
                 }
-                else if (attrType == "STRING" || attrType == "STRING[]") {
+                else if (attrType == "STRING") {
                     value = GPStore::Value(field);
+                }
+                else if (attrType == "STRING[]") {
+                    std::vector<std::string> tokens = split(field, ';');
+                    std::vector<GPStore::Value *> values;
+                    for (const auto& token : tokens) {
+                        values.push_back(new GPStore::Value(token));
+                    }
+                    
+                    value = GPStore::Value(values, true /* deep_copy */);
+
+                    // free memory
+                    for (auto v : values) {
+                        delete v;
+                    }
                 }
                 else { // 其他类型
                     std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
