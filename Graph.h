@@ -22,7 +22,8 @@ class Graph {
         struct GraphNode {
             int64_t id;
             std::unordered_map<std::string, GPStore::Value> attributes;
-            std::unordered_map<std::string, std::vector<GPStore::Value>> neighbors; // edgeType -> endNodeIds
+            std::unordered_map<std::string, std::vector<GPStore::Value>> neighborsOut; // edgeType -> endNodeIds
+            std::unordered_map<std::string, std::vector<GPStore::Value>> neighborsIn; // edgeType -> endNodeIds
         };
 
         struct GraphEdge {

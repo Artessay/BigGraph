@@ -5,13 +5,22 @@
 
 Node::Node(const std::string& label_string, const std::string& prop_string, const GPStore::Value* value) {
     assert(prop_string == "id");
+    int64_t node_id = value->toLLong();
 
-    int64_t id = value->toLLong();
-    node_ = Graph::getInstance().findNode(label_string, id);
+    node_ = Graph::getInstance().findNode(label_string, node_id);
+    node_id_ = node_id;
+
+    std::cerr << "Node: " << node_id_ << std::endl;
 }
 
-Node::Node(unsigned node_id) {
+Node::Node(const std::string& label_string, int64_t node_id) {
+    node_ = Graph::getInstance().findNode(label_string, node_id);
+    node_id_ = node_id;
+}
+
+Node::Node(int64_t node_id) {
     node_ = Graph::getInstance().findNode(node_id);
+    node_id_ = node_id;
 }
 
 GPStore::Value* Node::operator[](const std::string& property_string) {
@@ -25,8 +34,8 @@ GPStore::Value* Node::operator[](const std::string& property_string) {
     }
 
     {
-        auto it = node_->neighbors.find(property_string);
-        if (it != node_->neighbors.end()) {
+        auto it = node_->neighborsOut.find(property_string);
+        if (it != node_->neighborsOut.end()) {
             std::vector<GPStore::Value>& neighbors = it->second;
             assert(neighbors.size() == 1);
             return &neighbors[0];
@@ -38,9 +47,20 @@ GPStore::Value* Node::operator[](const std::string& property_string) {
     return nullptr;
 }
 
-void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, unsigned& list_len, char edge_dir) {
+void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const int64_t[]>& nodes_list, unsigned& list_len, char edge_dir) {
 }
 
-void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const unsigned[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
+void Node::GetLinkedNodesWithEdgeProps(const std::string& pre_str, std::shared_ptr<const int64_t[]>& nodes_list, std::shared_ptr<const long long[]>& prop_list,
                                        unsigned& prop_len, unsigned& list_len, char edge_dir) {
+}
+
+
+void Node::printInfo() const {
+    assert(node_ != nullptr);
+    std::cout << "Node Information:" << std::endl;
+    std::cout << "Node ID: " << node_id_ << std::endl;
+    std::cout << "Attributes: " << std::endl;
+    for (const auto& [attr, val] : node_->attributes) {
+        std::cout << "  " << attr << ": " << val.toString() << std::endl;
+    }
 }
