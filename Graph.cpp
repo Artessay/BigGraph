@@ -21,6 +21,7 @@ void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType)
     std::string headersDir = baseDir + "/headers/" + schemaType;
     std::string dataDir = baseDir + "/" + schemaType;
 
+    // load node first and then load edge
     for (const auto& entry : fs::directory_iterator(headersDir)) {
         if (entry.is_regular_file()) {
             std::string filename = entry.path().filename().string();
@@ -37,6 +38,28 @@ void Graph::loadGraph(const std::string& baseDir, const std::string& schemaType)
                 // node
                 nodeSchemas[schemaName] = schema;
                 loadNodes(schemaName, dataDir);
+            } else {
+                // edge
+                continue;
+            }
+        }
+    }
+
+    for (const auto& entry : fs::directory_iterator(headersDir)) {
+        if (entry.is_regular_file()) {
+            std::string filename = entry.path().filename().string();
+            // std::cout << filename << std::endl;
+            
+            assert(filename.find(".csv") != std::string::npos);
+            std::string schemaName = filename.substr(0, filename.find(".csv"));
+            
+            Schema schema;
+            parseSchema(entry.path().string(), schema);
+
+            // judge whether it is a node or an edge
+            if (schemaName.find("_") == std::string::npos) {
+                // node
+                continue;
             } else {
                 // edge
                 std::vector<std::string> schemaParts = split(schemaName, '_');
@@ -105,34 +128,34 @@ void Graph::loadNodes(const std::string& schemaName, const std::string& dataDir)
             }
             const auto& [attrName, attrType] = nodeSchemas[schemaName].attributes[attrIndex];
 
-            if (attrName == "id") {
+            GPStore::Value value;
+                if (attrName == "id") {
+                assert(attrType.find("ID") != std::string::npos);
+
+                // assume all IDs are 64-bit
                 node.id = std::stoll(field);
-            } else {
-                GPStore::Value value;
-                if (attrType.find("ID") != std::string::npos) {
-                    // assume all IDs are 64-bit
-                    value = GPStore::Value(std::stoll(field));
-                }
-                else if (attrType == "LONG") {
-                    value = GPStore::Value(std::stoll(field));
-                }
-                else if (attrType == "DOUBLE") {
-                    value = GPStore::Value(std::stod(field));
-                }
-                else if (attrType == "STRING" || attrType == "STRING[]" || attrType == "LABEL") {
-                    value = GPStore::Value(field);
-                }
-                else { // 其他类型
-                    std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
-                    assert(false && "Unsupported attribute type ");
-                    value = GPStore::Value(field);
-                }
-                node.attributes[attrName] = value;
+                value = GPStore::Value(node.id);
             }
+            else if (attrType == "LONG") {
+                value = GPStore::Value(std::stoll(field));
+            }
+            else if (attrType == "DOUBLE") {
+                value = GPStore::Value(std::stod(field));
+            }
+            else if (attrType == "STRING" || attrType == "STRING[]" || attrType == "LABEL") {
+                value = GPStore::Value(field);
+            }
+            else { // 其他类型
+                std::cerr << "Unsupported attribute type: " << attrType << " in file: " << prefixLower << std::endl;
+                assert(false && "Unsupported attribute type ");
+                value = GPStore::Value(field);
+            }
+            node.attributes[attrName] = value;
+                
             attrIndex++;
         }
 
-        nodes[schemaName].emplace_back(std::move(node));
+        nodes[schemaName][node.id] = std::move(node);
     }
 
 #ifdef DEBUG
@@ -195,12 +218,10 @@ void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
             }
             const auto& [attrName, attrType] = edgeSchema.attributes[attrIndex];
             
-            if (attrName == ":START_ID") {
-                assert(false);
+            if (attrType.find("START_ID") != std::string::npos) {
                 edge.start_id = std::stoll(field);
             }
-            else if (attrName == ":END_ID") {
-                assert(false);
+            else if (attrType.find("END_ID") != std::string::npos) {
                 edge.end_id = std::stoll(field);
             }
             else {
@@ -224,13 +245,25 @@ void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
                     value = GPStore::Value(field);
                 }
                 edge.attributes[attrName] = value;
-
-                //
             }
             attrIndex++;
         }
 
         edges[edgeType].emplace_back(std::move(edge));
+
+        // add neighbors
+        GraphNode* startNode = findNode(startNodeSchema, edge.start_id);
+        if (startNode != nullptr) {
+            startNode->neighbors[edgeType].push_back(edge.end_id);
+        } else {
+            // std::cerr << "Can not find start node: " << edge.start_id << " with schema " << startNodeSchema << " for edge: " << edgeType << std::endl;
+            
+            // create a new node
+            GraphNode node;
+            node.id = edge.start_id;
+            node.neighbors[edgeType].push_back(edge.end_id);
+            nodes[startNodeSchema][node.id] = std::move(node);
+        }
     }
 
 #ifdef DEBUG
@@ -253,10 +286,9 @@ void Graph::printInfo() const {
 
 Graph::GraphNode* Graph::findNode(int64_t nodeId) {
     for (auto& [type, nodeList] : nodes) {
-        for (auto& node : nodeList) {
-            if (node.id == nodeId) {
-                return &node;
-            }
+        auto nodeIt = nodeList.find(nodeId);
+        if (nodeIt != nodeList.end()) {
+            return &(nodeIt->second);
         }
     }
 
@@ -266,13 +298,13 @@ Graph::GraphNode* Graph::findNode(int64_t nodeId) {
 Graph::GraphNode* Graph::findNode(const std::string& nodeType, int64_t nodeId) {
     auto it = nodes.find(nodeType);
     if (it == nodes.end()) {
+        std::cerr << "Can not find node type: " << nodeType << std::endl;
         return nullptr;
     }
 
-    for (auto& node : it->second) {
-        if (node.id == nodeId) {
-            return &node;
-        }
+    auto nodeIt = it->second.find(nodeId);
+    if (nodeIt != it->second.end()) {
+        return &(nodeIt->second);
     }
 
     return nullptr;

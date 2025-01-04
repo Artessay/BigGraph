@@ -22,7 +22,7 @@ class Graph {
         struct GraphNode {
             int64_t id;
             std::unordered_map<std::string, GPStore::Value> attributes;
-            std::unordered_map<std::string, std::vector<int64_t>> neighbors;
+            std::unordered_map<std::string, std::vector<GPStore::Value>> neighbors; // edgeType -> endNodeIds
         };
 
         struct GraphEdge {
@@ -49,7 +49,7 @@ class Graph {
         std::unordered_map<std::string, Schema> edgeSchemas;
 
         // 存储节点，按类型分类
-        std::unordered_map<std::string, std::vector<GraphNode>> nodes;
+        std::unordered_map<std::string, std::unordered_map<int64_t, GraphNode>> nodes;
 
         // 存储边，按类型分类
         std::unordered_map<std::string, std::vector<GraphEdge>> edges;

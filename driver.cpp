@@ -132,13 +132,12 @@ int main(int argc, char *argv[]) {
     // graph.printInfo();
     cout << "Graph loaded" << endl;
 
-    vector<GPStore::Value> args;
-    vector<vector<GPStore::Value>> result;
-    args.emplace_back(32985348833679LL);
-    is1(args, result);
-    printResults(result);
+    // vector<GPStore::Value> args;
+    // vector<vector<GPStore::Value>> result;
+    // args.emplace_back(32985348833679LL);
+    // is1(args, result);
+    // printResults(result);
 
-    return 0;
 #endif
 
     // Repeatedly read test cases from stdin
