@@ -285,7 +285,7 @@ void Graph::loadEdges(const std::string& edgeType, const std::string& dataDir) {
             attrIndex++;
         }
 
-        edges[edgeType].emplace_back(std::move(edge));
+        edges[edgeType][edge.start_id][edge.end_id] = std::move(edge);
 
         // add neighbors
         GraphNode* startNode = findNode(startNodeSchema, edge.start_id);
@@ -358,4 +358,27 @@ Graph::GraphNode* Graph::findNode(const std::string& nodeType, int64_t nodeId) {
 
     // std::cerr << "Can not find node: " << nodeId << " with schema " << nodeType << std::endl;
     return nullptr;
+}
+
+
+Graph::GraphEdge* Graph::findEdge(const std::string& edgeType, int64_t startId, int64_t endId) {
+    auto it = edges.find(edgeType);
+    if (it == edges.end()) {
+        std::cerr << "Can not find edge type: " << edgeType << std::endl;
+        return nullptr;
+    }
+
+    auto startIt = it->second.find(startId);
+    if (startIt == it->second.end()) {
+        std::cerr << "Can not find start node: " << startId << " for edge: " << edgeType << std::endl;
+        return nullptr;
+    }
+
+    auto endIt = startIt->second.find(endId);
+    if (endIt == startIt->second.end()) {
+        std::cerr << "Can not find end node: " << endId << " for edge: " << edgeType << std::endl;
+        return nullptr;
+    }
+
+    return &(endIt->second);
 }

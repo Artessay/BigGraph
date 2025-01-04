@@ -41,7 +41,7 @@ GPStore::Value* Node::operator[](const std::string& property_string) {
     }
 
     std::cerr << "Can not find property: " << property_string << " in node: " << node_->id << std::endl;
-    assert(false && "Property not found");
+    // assert(false && "Property not found");
     return nullptr;
 }
 
@@ -55,6 +55,24 @@ std::vector<GPStore::Value>& Node::GetLinkedNodes(const std::string& pre_str, ch
         assert(false && "Invalid edge direction");
     }
 }
+
+
+GPStore::Value* Node::GetEdgeProps(const std::string& edge_type, int64_t start_id, int64_t end_id, const std::string& prop_name) {
+    Graph::GraphEdge* graphEdge = Graph::getInstance().findEdge(edge_type, start_id, end_id);
+    if (graphEdge == nullptr) {
+        assert(false && "Edge not found");
+        return nullptr;
+    }
+
+    auto it = graphEdge->attributes.find(prop_name);
+    if (it != graphEdge->attributes.end()) {
+        return &it->second;
+    } else {
+        assert(false && "Property not found");
+        return nullptr;
+    }
+}
+
 
 void Node::GetLinkedNodes(const std::string& pre_str, std::shared_ptr<const int64_t[]>& nodes_list, unsigned& list_len, char edge_dir) {
 }

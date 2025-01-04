@@ -38,6 +38,8 @@ class Graph {
 
         GraphNode* findNode(const std::string& nodeType, int64_t nodeId);
 
+        GraphEdge* findEdge(const std::string& edgeType, int64_t startId, int64_t endId);
+
         void printInfo() const;
 
     private:
@@ -53,7 +55,7 @@ class Graph {
         std::unordered_map<std::string, std::unordered_map<int64_t, GraphNode>> nodes;
 
         // 存储边，按类型分类
-        std::unordered_map<std::string, std::vector<GraphEdge>> edges;
+        std::unordered_map<std::string, std::unordered_map<int64_t, std::unordered_map<int64_t, GraphEdge>>> edges;
 
         Graph() {};
 

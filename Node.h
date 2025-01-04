@@ -23,5 +23,7 @@ class Node {
 
   std::vector<GPStore::Value>& GetLinkedNodes(const std::string& pre_str, char edge_dir);
 
+  static GPStore::Value* GetEdgeProps(const std::string& edge_type, int64_t start_id, int64_t end_id, const std::string& prop_name);
+
   void printInfo() const;
 };

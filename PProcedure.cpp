@@ -20,43 +20,43 @@ std::map<long long, std::pair<long long, long long> > &candidates_index, std::ma
         long long like_creation_date = creation_date_list[j];
         auto it = candidates_index.find(person_vid);
         if (it != candidates_index.end()) {
-        auto &key = it->second;
-        if (like_creation_date < 0 - key.first) {
-            continue;
-        }
-        if (like_creation_date == 0 - key.first) {
-            auto cit = candidates.find(key);
-            long long old_message_id = std::get<1>(cit->second);
-            if (message_id > old_message_id) {
-            continue;
+            auto &key = it->second;
+            if (like_creation_date < 0 - key.first) {
+                continue;
             }
-        }
-        candidates.erase(key);
-        key.first = 0 - like_creation_date;
-        candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                            (like_creation_date - message_creation_date) / 1000 / 60));
+            if (like_creation_date == 0 - key.first) {
+                auto cit = candidates.find(key);
+                long long old_message_id = std::get<1>(cit->second);
+                if (message_id > old_message_id) {
+                    continue;
+                }
+            }
+            candidates.erase(key);
+            key.first = 0 - like_creation_date;
+            candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
+                                (like_creation_date - message_creation_date) / 1000 / 60));
         } else {
-        long long person_id;
-        auto pit = person_id_map.find(person_vid);
-        if (pit != person_id_map.end()) {
-            person_id = pit->second;
-        } else {
-            other_person.Goto(person_vid);
-            person_id = other_person["id"]->toLLong();
-            person_id_map[person_vid] = person_id;
-        }
-        auto key = std::make_pair(0 - like_creation_date, person_id);
-        if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end()) {
-            continue;
-        }
-        candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                            (like_creation_date - message_creation_date) / 1000 / 60));
-        candidates_index.emplace(person_vid, key);
-        if (candidates.size() > LIMIT_NUM) {
-            auto cit = --candidates.end();
-            candidates_index.erase(candidates_index.find(std::get<0>(cit->second)));
-            candidates.erase(cit);
-        }
+            long long person_id;
+            auto pit = person_id_map.find(person_vid);
+            if (pit != person_id_map.end()) {
+                person_id = pit->second;
+            } else {
+                other_person.Goto(person_vid);
+                person_id = other_person["id"]->toLLong();
+                person_id_map[person_vid] = person_id;
+            }
+            auto key = std::make_pair(0 - like_creation_date, person_id);
+            if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end()) {
+                continue;
+            }
+            candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
+                                (like_creation_date - message_creation_date) / 1000 / 60));
+            candidates_index.emplace(person_vid, key);
+            if (candidates.size() > LIMIT_NUM) {
+                auto cit = --candidates.end();
+                candidates_index.erase(candidates_index.find(std::get<0>(cit->second)));
+                candidates.erase(cit);
+            }
         }
     }
 }
@@ -74,8 +74,6 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     TYPE_ENTITY_LITERAL_ID start_vid = person_node.node_id_;
     std::vector<TYPE_ENTITY_LITERAL_ID> curr_frontier({start_vid});
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
-
-    // std::cerr << "start vid: " << start_vid << std::endl;
 
     for (int distance = 0; distance <= 3; distance++) {
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
@@ -144,26 +142,29 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(*person["language"]);
         result.back().emplace_back(*Node("Place", person["isLocatedIn"]->toLLong())["name"]);
 
-        std::shared_ptr<const int64_t[]> list = nullptr; unsigned list_len = 0;
-        std::shared_ptr<const long long[]> prop_list = nullptr; unsigned prop_len = 0;
+        // std::shared_ptr<const int64_t[]> list = nullptr; unsigned list_len = 0;
+        // std::shared_ptr<const long long[]> prop_list = nullptr; unsigned prop_len = 0;
 
         result.back().emplace_back(GPStore::Value::Type::LIST);
-        person.GetLinkedNodesWithEdgeProps("STUDY_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
-        for (unsigned i = 0; i < list_len; ++i) {
-        Node university(list[i]);
-        Node location_city(university["ORGANISATION_PLACE"]->toLLong());    // TODO: "ORGANISATION_PLACE"
-        vector<GPStore::Value *> university_prop_vec{university["name"], new GPStore::Value(prop_list[i]), location_city["name"]};
-        result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
+        std::vector<GPStore::Value>& universities = person.GetLinkedNodes("studyAt", EDGE_OUT);
+        for (const auto& university : universities) {
+            Node university_node(university.toLLong());
+            if (university_node["isLocatedIn"] == nullptr) continue;
+            Node location_city("Place", university_node["isLocatedIn"]->toLLong());
+            GPStore::Value* classYear = Node::GetEdgeProps("studyAt", person.node_id_, university_node.node_id_, "classYear");
+            std::vector<GPStore::Value *> university_prop_vec{university_node["name"], classYear, location_city["name"]};
+            result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
         }
-        list = nullptr; prop_list = nullptr;
 
         result.back().emplace_back(GPStore::Value::Type::LIST);
-        person.GetLinkedNodesWithEdgeProps("WORK_AT", list, prop_list, prop_len, list_len, EDGE_OUT);
-        for (unsigned i = 0; i < list_len; ++i) {
-        Node company(list[i]);
-        Node location_country(company["ORGANISATION_PLACE"]->toLLong());
-        vector<GPStore::Value *> university_prop_vec{company["name"], new GPStore::Value(prop_list[i]), location_country["name"]};
-        result.back().back().data_.List->emplace_back(new GPStore::Value(university_prop_vec, true));
+        std::vector<GPStore::Value>& companies = person.GetLinkedNodes("workAt", EDGE_OUT);
+        for (const auto& company : companies) {
+            Node company_node(company.toLLong());
+            if (company_node["isLocatedIn"] == nullptr) continue;
+            Node location_country("Place", company_node["isLocatedIn"]->toLLong());
+            GPStore::Value* work_from = Node::GetEdgeProps("workAt", person.node_id_, company_node.node_id_, "workFrom");
+            std::vector<GPStore::Value *> company_prop_vec{company_node["name"], work_from, location_country["name"]};
+            result.back().back().data_.List->emplace_back(new GPStore::Value(company_prop_vec, true));
         }
     }
 }
