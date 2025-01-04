@@ -142,13 +142,10 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(*person["language"]);
         result.back().emplace_back(*Node("Place", person["isLocatedIn"]->toLLong())["name"]);
 
-        // std::shared_ptr<const int64_t[]> list = nullptr; unsigned list_len = 0;
-        // std::shared_ptr<const long long[]> prop_list = nullptr; unsigned prop_len = 0;
-
         result.back().emplace_back(GPStore::Value::Type::LIST);
         std::vector<GPStore::Value>& universities = person.GetLinkedNodes("studyAt", EDGE_OUT);
         for (const auto& university : universities) {
-            Node university_node(university.toLLong());
+            Node university_node("Organisation", university.toLLong());
             if (university_node["isLocatedIn"] == nullptr) continue;
             Node location_city("Place", university_node["isLocatedIn"]->toLLong());
             GPStore::Value* classYear = Node::GetEdgeProps("studyAt", person.node_id_, university_node.node_id_, "classYear");
@@ -159,7 +156,7 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
         result.back().emplace_back(GPStore::Value::Type::LIST);
         std::vector<GPStore::Value>& companies = person.GetLinkedNodes("workAt", EDGE_OUT);
         for (const auto& company : companies) {
-            Node company_node(company.toLLong());
+            Node company_node("Organisation", company.toLLong());
             if (company_node["isLocatedIn"] == nullptr) continue;
             Node location_country("Place", company_node["isLocatedIn"]->toLLong());
             GPStore::Value* work_from = Node::GetEdgeProps("workAt", person.node_id_, company_node.node_id_, "workFrom");

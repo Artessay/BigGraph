@@ -146,6 +146,12 @@ int main(int argc, char *argv[]) {
     // is1(args, result);
     // printResults(result);
 
+    // // Test ic2
+    // args.emplace_back(15393162789932LL);
+    // args.emplace_back(1345740969124LL);
+    // ic2(args, result);
+    // printResults(result);
+
     // return 0;
 
 #endif
