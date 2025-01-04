@@ -132,11 +132,21 @@ int main(int argc, char *argv[]) {
     // graph.printInfo();
     cout << "Graph loaded" << endl;
 
-    // vector<GPStore::Value> args;
-    // vector<vector<GPStore::Value>> result;
+    vector<GPStore::Value> args;
+    vector<vector<GPStore::Value>> result;
+
+    // Test ic1
+    args.emplace_back(32985348834375LL);
+    args.emplace_back("Tom");
+    ic1(args, result);
+    printResults(result);
+
+    // // Test is1
     // args.emplace_back(32985348833679LL);
     // is1(args, result);
     // printResults(result);
+
+    return 0;
 
 #endif
 
@@ -168,7 +178,7 @@ int main(int argc, char *argv[]) {
                         long long personId = stoll(personId_str);
                         args.emplace_back(personId);
                         args.emplace_back(firstName);
-                        // ic1(args, result);
+                        ic1(args, result);
                     } else if (proc == "ic2") {
                         size_t pos = line.find(" ");
                         string personId_str = line.substr(0, pos);

@@ -1,5 +1,8 @@
 #include "PProcedure.h"
+#include <cassert>
+#include <iostream>
 using namespace std;
+
 const unsigned LIMIT_NUM = 20;
 const char EDGE_IN = 'i';
 const char EDGE_OUT = 'o';
@@ -65,29 +68,35 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     Node person_node("Person", "id", &args[0]);
     if (person_node.node_id_ == -1)
         return;
+    assert(person_node.node_ != nullptr);
+    
     std::set<std::tuple<int, std::string, long long, unsigned> > candidates;
     TYPE_ENTITY_LITERAL_ID start_vid = person_node.node_id_;
     std::vector<TYPE_ENTITY_LITERAL_ID> curr_frontier({start_vid});
     std::set<TYPE_ENTITY_LITERAL_ID> visited({start_vid});
 
-    for (int distance = 0; distance <= 3; distance++) {
+    // for (int distance = 0; distance <= 3; distance++) {
+    for (int distance = 0; distance <= 0; distance++) {
         std::vector<TYPE_ENTITY_LITERAL_ID > next_frontier;
         for (const auto& vid : curr_frontier) {
-        Node froniter_person(vid);
-        bool flag = vid == start_vid;
-        flag = flag || (froniter_person["firstName"]->toString() != first_name);
-        if (flag) continue;
-        std::string last_name = froniter_person["lastName"]->toString();
-        long long person_id = froniter_person["id"]->toLLong();
-        auto tup = std::make_tuple(distance, last_name, person_id, vid);
-        if (candidates.size() >= LIMIT_NUM) {
-            auto& candidate = *candidates.rbegin();
-            if (tup > candidate) continue;
-        }
-        candidates.emplace(std::move(tup));
-        if (candidates.size() > LIMIT_NUM) {
-            candidates.erase(--candidates.end());
-        }
+            GPStore::Value vid_value((int64_t)(vid));
+            Node froniter_person("Person", "id", &vid_value);
+            // Node froniter_person(vid);
+            bool flag = vid == start_vid;
+            flag = flag || (froniter_person["firstName"]->toString() != first_name);
+            std::cout << "firstName: " << froniter_person["firstName"]->toString() << std::endl;
+            if (flag) continue;
+            std::string last_name = froniter_person["lastName"]->toString();
+            long long person_id = froniter_person["id"]->toLLong();
+            auto tup = std::make_tuple(distance, last_name, person_id, vid);
+            if (candidates.size() >= LIMIT_NUM) {
+                auto& candidate = *candidates.rbegin();
+                if (tup > candidate) continue;
+            }
+            candidates.emplace(std::move(tup));
+            if (candidates.size() > LIMIT_NUM) {
+                candidates.erase(--candidates.end());
+            }
         }
         if (candidates.size() >= LIMIT_NUM || distance == 3) break;
         for (auto vid : curr_frontier) {
