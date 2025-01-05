@@ -288,7 +288,11 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
 
             long long msgId = msgNode["id"]->toLLong();
             std::string content = msgNode["content"] ? msgNode["content"]->toString() : "";
-
+            // 清除 content 字符串末尾的空格
+            if (!content.empty())
+            {
+                content.erase(content.find_last_not_of(" \t\n\r") + 1);
+            }
             auto tup = std::make_tuple(creationDate, msgId, friendVid, content);
 
             // 如果已达到限制条目数，比较并决定是否插入
@@ -328,7 +332,11 @@ void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
             std::string content = msgNode["content"] ? msgNode["content"]->toString() : "";
             if (content == "")
                 content = msgNode["imageFile"] ? msgNode["imageFile"]->toString() : "";
-
+            // 清除 content 字符串末尾的空格
+            if (!content.empty())
+            {
+                content.erase(content.find_last_not_of(" \t\n\r") + 1);
+            }
             auto tup = std::make_tuple(creationDate, msgId, friendVid, content);
 
             // 若已达限制条目数，比较并决定是否插入

@@ -83,6 +83,9 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
             if (result[i][j].getType() != GPStore::Value::LIST) {
                 if (result[i][j].toString() != trueResults[i][j]) {
                     cout << "Mismatch in value" << endl;
+                    printf("Mismatch (i,j): (%d,%d)",i,j);
+                    cout << "True: " << trueResults[i][j];
+                    cout << "My: " << result[i][j].toString();
                     return false;
                 }
             } else {
