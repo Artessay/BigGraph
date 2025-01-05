@@ -186,7 +186,7 @@ void Graph::loadNodes(const std::string &schemaName, const std::string &dataDir)
                 // 如果属性名称是 id
                 assert(attrType.find("ID") != std::string::npos);
                 node.id = std::stoll(field); // 转换为 64 位整数作为节点 ID
-                value = GPStore::Value(node.id);
+                value = GPStore::Value(static_cast<GPStore::int_64>(node.id));
             }
             else if (attrType == "LONG")
             {
@@ -391,7 +391,7 @@ void Graph::loadEdges(const std::string &edgeType, const std::string &dataDir)
         GraphNode *startNode = findNode(startNodeSchema, edge.start_id);
         if (startNode != nullptr)
         {
-            startNode->neighborsOut[edgeType].push_back(edge.end_id);
+            startNode->neighborsOut[edgeType].push_back(static_cast<GPStore::int_64>(edge.end_id));
             // 如果起始节点存在，添加出度邻居
         }
         else
@@ -399,14 +399,14 @@ void Graph::loadEdges(const std::string &edgeType, const std::string &dataDir)
             // 如果起始节点不存在，创建一个新节点并添加邻居
             GraphNode node;
             node.id = edge.start_id;
-            node.neighborsOut[edgeType].push_back(edge.end_id);
+            node.neighborsOut[edgeType].push_back(static_cast<GPStore::int_64>(edge.end_id));
             nodes[startNodeSchema][node.id] = std::move(node);
         }
 
         GraphNode *endNode = findNode(endNodeSchema, edge.end_id);
         if (endNode != nullptr)
         {
-            endNode->neighborsIn[edgeType].push_back(edge.start_id);
+            endNode->neighborsIn[edgeType].push_back(static_cast<GPStore::int_64>(edge.start_id));
             // 如果结束节点存在，添加入度邻居
         }
         else
@@ -414,7 +414,7 @@ void Graph::loadEdges(const std::string &edgeType, const std::string &dataDir)
             // 如果结束节点不存在，创建一个新节点并添加邻居
             GraphNode node;
             node.id = edge.end_id;
-            node.neighborsIn[edgeType].push_back(edge.start_id);
+            node.neighborsIn[edgeType].push_back(static_cast<GPStore::int_64>(edge.start_id));
             nodes[endNodeSchema][node.id] = std::move(node);
         }
     }

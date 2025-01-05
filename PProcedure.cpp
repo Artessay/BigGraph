@@ -8,51 +8,64 @@ const char EDGE_IN = 'i';
 const char EDGE_OUT = 'o';
 
 void ProcessMessageLikes(Node &message, long long message_id, long long message_creation_date,
-const std::string &message_content, Node &other_person, std::map<TYPE_ENTITY_LITERAL_ID, long long> &person_id_map,
-std::map<long long, std::pair<long long, long long> > &candidates_index, std::map<std::pair<long long, long long>, std::tuple<long long, long long, std::string, int> > &candidates) {
+                         const std::string &message_content, Node &other_person, std::map<TYPE_ENTITY_LITERAL_ID, long long> &person_id_map,
+                         std::map<long long, std::pair<long long, long long>> &candidates_index, std::map<std::pair<long long, long long>, std::tuple<long long, long long, std::string, int>> &candidates)
+{
     std::shared_ptr<const TYPE_ENTITY_LITERAL_ID[]> person_friends = nullptr;
     unsigned friends_num = 0;
     std::shared_ptr<const long long[]> creation_date_list = nullptr;
     unsigned creation_data_width = 0;
     message.GetLinkedNodesWithEdgeProps("LIKES", person_friends, creation_date_list, creation_data_width, friends_num, EDGE_IN);
-    for (unsigned j = 0; j < friends_num; ++j) {
+    for (unsigned j = 0; j < friends_num; ++j)
+    {
         auto person_vid = person_friends[j];
         long long like_creation_date = creation_date_list[j];
         auto it = candidates_index.find(person_vid);
-        if (it != candidates_index.end()) {
+        if (it != candidates_index.end())
+        {
             auto &key = it->second;
-            if (like_creation_date < 0 - key.first) {
+            if (like_creation_date < 0 - key.first)
+            {
                 continue;
             }
-            if (like_creation_date == 0 - key.first) {
+            if (like_creation_date == 0 - key.first)
+            {
                 auto cit = candidates.find(key);
                 long long old_message_id = std::get<1>(cit->second);
-                if (message_id > old_message_id) {
+                if (message_id > old_message_id)
+                {
                     continue;
                 }
             }
             candidates.erase(key);
             key.first = 0 - like_creation_date;
             candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                                (like_creation_date - message_creation_date) / 1000 / 60));
-        } else {
+                                                    (like_creation_date - message_creation_date) / 1000 / 60));
+        }
+        else
+        {
             long long person_id;
             auto pit = person_id_map.find(person_vid);
-            if (pit != person_id_map.end()) {
+            if (pit != person_id_map.end())
+            {
                 person_id = pit->second;
-            } else {
+            }
+            else
+            {
                 other_person.Goto(person_vid);
                 person_id = other_person["id"]->toLLong();
                 person_id_map[person_vid] = person_id;
             }
             auto key = std::make_pair(0 - like_creation_date, person_id);
-            if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end()) {
+            if (candidates.size() >= LIMIT_NUM && candidates.lower_bound(key) == candidates.end())
+            {
                 continue;
             }
             candidates.emplace(key, std::make_tuple(person_vid, message_id, message_content,
-                                (like_creation_date - message_creation_date) / 1000 / 60));
+                                                    (like_creation_date - message_creation_date) / 1000 / 60));
             candidates_index.emplace(person_vid, key);
-            if (candidates.size() > LIMIT_NUM) {
+            if (candidates.size() > LIMIT_NUM)
+            {
                 auto cit = --candidates.end();
                 candidates_index.erase(candidates_index.find(std::get<0>(cit->second)));
                 candidates.erase(cit);
@@ -208,10 +221,165 @@ void ic1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStor
     }
 }
 
-void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result) {
+void ic2(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result)
+{
+    // 解析参数：personId 和 maxDate
+    long long personId = args[0].toLLong(); // 起始人的 ID
+    long long maxDate = args[1].toLLong();  // 截止时间（不含当天）
+
+    // 创建起始 Person 节点
+    Node start_person("Person", "id", &args[0]);
+    if (start_person.node_id_ == -1)
+    {
+        // person 不存在，直接返回空结果
+        return;
+    }
+
+    // 获取所有好友（knows 双向：EDGE_OUT + EDGE_IN）
+    std::vector<GPStore::Value> friends_out = start_person.GetLinkedNodes("knows", EDGE_OUT);
+    std::vector<GPStore::Value> friends_in = start_person.GetLinkedNodes("knows", EDGE_IN);
+
+    // 用 set 去重存储好友的节点ID
+    std::set<TYPE_ENTITY_LITERAL_ID> friends_set;
+    for (auto &val : friends_out)
+    {
+        friends_set.insert(val.toLLong());
+    }
+    for (auto &val : friends_in)
+    {
+        friends_set.insert(val.toLLong());
+    }
+
+    // 定义自定义比较函数：先按 creationDate 降序，若相同则按 msgId 升序
+    auto cmp = [](auto &lhs, auto &rhs)
+    {
+        long long lhsCreation = std::get<0>(lhs);
+        long long lhsMsgId = std::get<1>(lhs);
+        long long rhsCreation = std::get<0>(rhs);
+        long long rhsMsgId = std::get<1>(rhs);
+
+        if (lhsCreation != rhsCreation)
+            return lhsCreation > rhsCreation; // creationDate 降序
+        return lhsMsgId < rhsMsgId;           // msgId 升序
+    };
+
+    // 存储消息的 set，按时间和 msgId 排序
+    std::set<std::tuple<long long, long long, long long, std::string>, decltype(cmp)> all_messages(cmp);
+
+    // 遍历好友，收集他们的消息
+    for (auto friendVid : friends_set)
+    {
+        Node friend_person("Person", friendVid);
+        if (friend_person.node_id_ == -1)
+            continue;
+
+        // 获取好友创建的消息（Comment）
+        std::vector<GPStore::Value> created_msgs = friend_person.GetLinkedNodes("hasCreator", EDGE_IN);
+
+        for (auto &msgVal : created_msgs)
+        {
+            Node msgNode("Comment", msgVal.toLLong());
+            if (msgNode.node_id_ == -1 || msgNode.node_ == nullptr)
+                continue;
+
+            long long creationDate = msgNode["creationDate"]->toLLong();
+            if (creationDate > maxDate)
+                continue; // 只考虑小于 maxDate 的消息
+
+            long long msgId = msgNode["id"]->toLLong();
+            std::string content = msgNode["content"] ? msgNode["content"]->toString() : "";
+
+            auto tup = std::make_tuple(creationDate, msgId, friendVid, content);
+
+            // 如果已达到限制条目数，比较并决定是否插入
+            if (all_messages.size() >= LIMIT_NUM)
+            {
+                auto it_last = std::prev(all_messages.end());
+                if (cmp(*it_last, tup))
+                {
+                    // 如果 *it_last 更新，不插入
+                    continue;
+                }
+                // 否则插入并删除最旧的一条
+                all_messages.insert(tup);
+                if (all_messages.size() > LIMIT_NUM)
+                {
+                    all_messages.erase(std::prev(all_messages.end()));
+                }
+            }
+            else
+            {
+                all_messages.insert(tup);
+            }
+        }
+
+        // 获取好友创建的消息（Post）
+        for (auto &msgVal : created_msgs)
+        {
+            Node msgNode("Post", msgVal.toLLong());
+            if (msgNode.node_id_ == -1 || msgNode.node_ == nullptr)
+                continue;
+
+            long long creationDate = msgNode["creationDate"]->toLLong();
+            if (creationDate > maxDate)
+                continue; // 只考虑小于 maxDate 的消息
+
+            long long msgId = msgNode["id"]->toLLong();
+            std::string content = msgNode["content"] ? msgNode["content"]->toString() : "";
+            if (content == "")
+                content = msgNode["imageFile"] ? msgNode["imageFile"]->toString() : "";
+
+            auto tup = std::make_tuple(creationDate, msgId, friendVid, content);
+
+            // 若已达限制条目数，比较并决定是否插入
+            if (all_messages.size() >= LIMIT_NUM)
+            {
+                auto it_last = std::prev(all_messages.end());
+                if (cmp(*it_last, tup))
+                {
+                    // 如果 *it_last 更新，不插入
+                    continue;
+                }
+                // 否则插入并删除最旧的一条
+                all_messages.insert(tup);
+                if (all_messages.size() > LIMIT_NUM)
+                {
+                    all_messages.erase(std::prev(all_messages.end()));
+                }
+            }
+            else
+            {
+                all_messages.insert(tup);
+            }
+        }
+    }
+
+    // 将最终结果放入 result
+    for (auto &t : all_messages)
+    {
+        long long creationDate = std::get<0>(t);
+        long long msgId = std::get<1>(t);
+        long long friendVid = std::get<2>(t);
+        std::string content = std::get<3>(t);
+
+        Node friend_person("Person", friendVid);
+        std::string friendFirstName = friend_person["firstName"] ? friend_person["firstName"]->toString() : "";
+        std::string friendLastName = friend_person["lastName"] ? friend_person["lastName"]->toString() : "";
+
+        // 将结果写入一行
+        result.emplace_back();
+        auto &row = result.back();
+        row.push_back(GPStore::Value(friendVid));
+        row.push_back(GPStore::Value(friendFirstName));
+        row.push_back(GPStore::Value(friendLastName));
+        row.push_back(GPStore::Value(msgId));
+        row.push_back(GPStore::Value(content));
+        row.push_back(GPStore::Value(creationDate));
+    }
 }
 
-void is1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result) {
+void is1(const std::vector<GPStore::Value> &args, std::vector<std::vector<GPStore::Value>> &result)
+{
     Node person_node("Person", "id", &args[0]);
     if (person_node.node_id_ == -1)
         return;
