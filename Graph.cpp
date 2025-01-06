@@ -421,7 +421,7 @@ void Graph::loadEdges(const std::string &edgeType, const std::string &dataDir)
 
 #ifdef DEBUG
     // 如果定义了 DEBUG 宏，输出加载信息
-    std::cout << "Loaded " << edges[edgeType].size() << " edges of type " << edgeType << std::endl;
+    std::cout << "Loaded edges of type " << edgeType << std::endl;
 #endif
 }
 

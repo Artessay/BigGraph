@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
                         args.emplace_back(personId);
                         is1(args, result);
                     }
-                    // printResults(result);
+                    printResults(result);
                     getline(fin, line);
                     int numRows = stoi(line);
                     vector<vector<string>> trueResults;
