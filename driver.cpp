@@ -83,9 +83,6 @@ bool compareResults(std::vector<std::vector<GPStore::Value>> &result, std::vecto
             if (result[i][j].getType() != GPStore::Value::LIST) {
                 if (result[i][j].toString() != trueResults[i][j]) {
                     cout << "Mismatch in value" << endl;
-                    printf("Mismatch (i,j): (%d,%d)",i,j);
-                    cout << "True: " << trueResults[i][j];
-                    cout << "My: " << result[i][j].toString();
                     return false;
                 }
             } else {
@@ -130,10 +127,10 @@ int main(int argc, char *argv[]) {
     // [FILL HERE] Load the dataset according to the scale factor
     Graph& graph = Graph::getInstance();
     graph.init(sf);
+    cout << "Graph loaded" << endl;
 
 #ifdef DEBUG
     // graph.printInfo();
-    cout << "Graph loaded" << endl;
 
     // vector<GPStore::Value> args;
     // vector<vector<GPStore::Value>> result;
@@ -156,7 +153,6 @@ int main(int argc, char *argv[]) {
     // printResults(result);
 
     // return 0;
-
 #endif
 
     // Repeatedly read test cases from stdin
@@ -202,7 +198,7 @@ int main(int argc, char *argv[]) {
                         args.emplace_back(personId);
                         is1(args, result);
                     }
-                    printResults(result);
+                    // printResults(result);
                     getline(fin, line);
                     int numRows = stoi(line);
                     vector<vector<string>> trueResults;

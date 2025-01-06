@@ -26,7 +26,8 @@ set(SOURCES
 # )
 
 # Add any additional compiler flags here
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O0 -g -DDEBUG")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O0 -g -DDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O2 -DDEBUG")
 
 # Create the executable
 add_executable(driver ${SOURCES})

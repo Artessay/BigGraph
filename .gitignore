@@ -1,11 +1,3 @@
-cmake_install.cmake
-cmake-3.25.0.tar.gz
-CMakeCache.txt
-cmake-3.25.0/
-CMakeFiles/
-driver
-social_network-csv_composite-longdateformatter-sf3/
-
 .vscode
 build
 
